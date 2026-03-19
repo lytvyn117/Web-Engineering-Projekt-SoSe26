@@ -1,0 +1,15 @@
+appointment-booking/
+│
+├── frontend/
+│   ├── index.html
+│   ├── slots.html
+│   ├── admin.html
+│   ├── style.css
+│   └── app.js
+│
+└── backend/
+    ├── app.py
+    ├── db.py
+    ├── config.py
+    ├── requirements.txt
+    └── venv/

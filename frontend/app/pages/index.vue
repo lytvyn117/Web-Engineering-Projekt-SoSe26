@@ -1,5 +1,5 @@
-<!-- this file was created at first by Chat GPT to help me get started 
- and connect to the database and display the slots on the homepage. 
+<!-- In this file the first steps with the connection of Supabase and first functions were made 
+ with the help of Chat GPT to help me get started and display the slots on the homepage. 
  Everything afterwards was added manually with assistance from Chat GPT 
  where I asked for conceptual guidance. -->
 
@@ -11,12 +11,18 @@ const bookedSlotIds = ref([])
 
 const errorMessage = ref('')
 const successMessage = ref('')
+const cancelSuccessMessage = ref('')
 
 const selectedSlot = ref(null)
 
 const studentName = ref('')
 const matrikelnummer = ref('')
 const anliegen = ref('')
+
+const searchMatrikelnummer = ref('')
+const myBookings = ref([])
+
+const hasSearchedBookings = ref(false)
 
 async function loadSlots() {
   errorMessage.value = ''
@@ -109,6 +115,59 @@ async function createBooking() {
     await loadSlots()
 }
 
+async function loadMyBookings() {
+  errorMessage.value = ''
+  successMessage.value = ''
+  hasSearchedBookings.value = true
+
+  if (!searchMatrikelnummer.value) {
+    errorMessage.value = 'Bitte eine Matrikelnummer eingeben.'
+    return
+  }
+
+  const { data, error } = await $supabase
+    .from('bookings')
+    .select(`
+      id,
+      slot_id,
+      student_name,
+      matrikelnummer,
+      anliegen,
+      slots (
+        slot_date,
+        slot_time
+      )
+    `)
+    .eq('matrikelnummer', searchMatrikelnummer.value)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    errorMessage.value = 'Buchungen konnten nicht geladen werden.'
+    return
+  }
+
+  myBookings.value = data
+}
+
+async function cancelBooking(bookingId) {
+  errorMessage.value = ''
+  cancelSuccessMessage.value = ''
+
+  const { error } = await $supabase
+    .from('bookings')
+    .delete()
+    .eq('id', bookingId)
+
+  if (error) {
+    errorMessage.value = 'Buchung konnte nicht storniert werden.'
+    return
+  }
+
+  cancelSuccessMessage.value = 'Buchung wurde storniert.'
+  await loadMyBookings()
+  await loadSlots()
+}
+
 onMounted(() => {
   loadSlots()
 })
@@ -152,6 +211,36 @@ onMounted(() => {
       <textarea v-model="anliegen" placeholder="Anliegen"></textarea>
 
       <button @click="createBooking">Buchung speichern</button>
+    </div>
+
+    <div class="my-bookings">
+      <h2>Meine Buchungen</h2>
+
+      <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+      <p v-if="cancelSuccessMessage" class="success-message">{{ cancelSuccessMessage }}</p>
+
+      <div class="search-row">
+        <input
+          v-model="searchMatrikelnummer"
+          type="text"
+          placeholder="Matrikelnummer eingeben"
+        />
+        <button @click="loadMyBookings">Buchungen laden</button>
+      </div>
+
+      <ul v-if="myBookings.length > 0" class="booking-list">
+        <li v-for="booking in myBookings" :key="booking.id" class="booking-item">
+          <div>
+            <strong>{{ booking.slots?.slot_date }} - {{ booking.slots?.slot_time }}</strong>
+            <div>{{ booking.student_name }}</div>
+            <div>{{ booking.anliegen }}</div>
+          </div>
+
+          <button @click="cancelBooking(booking.id)">Stornieren</button>
+        </li>
+      </ul>
+
+      <p v-else-if="hasSearchedBookings">Keine Buchungen gefunden.</p>
     </div>
   </div>
 </template>
@@ -201,5 +290,31 @@ button {
 .success-message {
   color: #1b5e20;
   font-weight: bold;
+}
+
+.my-bookings {
+  margin-top: 40px;
+  max-width: 700px;
+}
+
+.search-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.booking-list {
+  list-style: none;
+  padding: 0;
+}
+
+.booking-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 12px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
 }
 </style>

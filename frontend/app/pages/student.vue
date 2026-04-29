@@ -4,6 +4,8 @@
  where I asked for conceptual guidance. -->
 
 <script setup>
+import { formatDate, formatTime, formatDateTime } from '../utils/formatters'
+
 const { $supabase } = useNuxtApp()
 
 const slots = ref([])
@@ -183,9 +185,9 @@ onMounted(() => {
     <ul class="slot-list">
       <li v-for="slot in slots" :key="slot.id" class="slot-item">
         <span>
-          {{ slot.slot_date }} - {{ slot.slot_time }}
+          {{ formatDateTime(slot.slot_date, slot.slot_time) }}
         </span>
-
+        
         <template v-if="slot.is_blocked">
           <strong>Gesperrt</strong>
         </template>
@@ -231,7 +233,7 @@ onMounted(() => {
       <ul v-if="myBookings.length > 0" class="booking-list">
         <li v-for="booking in myBookings" :key="booking.id" class="booking-item">
           <div>
-            <strong>{{ booking.slots?.slot_date }} - {{ booking.slots?.slot_time }}</strong>
+            <strong>{{ formatDateTime(booking.slots?.slot_date, booking.slots?.slot_time) }}</strong>
             <div>{{ booking.student_name }}</div>
             <div>{{ booking.anliegen }}</div>
           </div>

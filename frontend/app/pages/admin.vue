@@ -132,7 +132,11 @@ async function createSlot() {
     ])
 
   if (error) {
-    errorMessage.value = 'Slot konnte nicht angelegt werden.'
+    if (error.code === '23505') {
+      errorMessage.value = 'Dieser Slot existiert bereits.'
+    } else {
+      errorMessage.value = 'Slot konnte nicht angelegt werden.'
+    }
     return
   }
 
@@ -212,6 +216,12 @@ function minutesToTime(minutes) {
   return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:00`
 }
 
+/* The next function for creating recurring slots was created with the help of Chat GPT.
+The struktural logic for generating the slots is based on iterating through the date range 
+and checking for the selected weekdays, then creating slots based on the specified time 
+range and interval. Additionally, it checks for existing slots to avoid duplicates 
+before inserting new ones into the database.
+*/
 async function createRecurringSlots() {
   errorMessage.value = ''
   successMessage.value = ''
@@ -251,6 +261,7 @@ async function createRecurringSlots() {
 
   while (currentDate <= endDate) {
     const weekday = currentDate.getDay()
+
     if (selectedDays.includes(weekday)) {
       for (
         let currentMinutes = startMinutes;
@@ -273,16 +284,47 @@ async function createRecurringSlots() {
     return
   }
 
+  const { data: existingSlots, error: existingError } = await $supabase
+    .from('slots')
+    .select('slot_date, slot_time')
+    .gte('slot_date', recurringStartDate.value)
+    .lte('slot_date', recurringEndDate.value)
+
+  if (existingError) {
+    errorMessage.value = 'Vorhandene Slots konnten nicht geprüft werden.'
+    return
+  }
+
+  const existingSlotKeys = new Set(
+    existingSlots.map(slot => `${slot.slot_date}_${slot.slot_time}`)
+  )
+
+  const filteredSlotsToInsert = slotsToInsert.filter(slot => {
+    const key = `${slot.slot_date}_${slot.slot_time}`
+    return !existingSlotKeys.has(key)
+  })
+
+  if (filteredSlotsToInsert.length === 0) {
+    errorMessage.value = 'Alle erzeugten Slots existieren bereits.'
+    return
+  }
+
   const { error } = await $supabase
     .from('slots')
-    .insert(slotsToInsert)
+    .insert(filteredSlotsToInsert)
 
   if (error) {
     errorMessage.value = 'Wiederkehrende Slots konnten nicht angelegt werden.'
     return
   }
 
-  successMessage.value = `${slotsToInsert.length} Slots wurden erfolgreich angelegt.`
+  const skippedCount = slotsToInsert.length - filteredSlotsToInsert.length
+
+  if (skippedCount > 0) {
+    successMessage.value = `${filteredSlotsToInsert.length} Slots wurden angelegt. ${skippedCount} bereits vorhandene Slots wurden übersprungen.`
+  } else {
+    successMessage.value = `${filteredSlotsToInsert.length} Slots wurden erfolgreich angelegt.`
+  }
 
   recurringStartDate.value = ''
   recurringEndDate.value = ''
@@ -318,9 +360,11 @@ onMounted(async () => {
       </div>
       <h1>Admin-Bereich</h1>
 
+      <h2>Einzelslot anlegen</h2>
+
       <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
       <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
-
+      
       <div class="create-slot-form">
         <input v-model="slotDate" type="date" />
         <input v-model="slotTime" type="time" />

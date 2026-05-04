@@ -26,6 +26,8 @@ const myBookings = ref([])
 
 const hasSearchedBookings = ref(false)
 
+const bookingFormRef = ref(null)
+
 async function loadSlots() {
   errorMessage.value = ''
 
@@ -57,13 +59,20 @@ function isBooked(slotId) {
     return bookedSlotIds.value.includes(slotId)
 }
 
-function selectSlot(slot) {
-    if (slot.is_blocked) return
-    if (isBooked(slot.id)) return
+async function selectSlot(slot) {
+  if (slot.is_blocked) return
+  if (isBooked(slot.id)) return
 
-    selectedSlot.value = slot
-    successMessage.value = ''
-    errorMessage.value = ''
+  selectedSlot.value = slot
+  successMessage.value = ''
+  errorMessage.value = ''
+
+  await nextTick()
+
+  bookingFormRef.value?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start'
+  })
 }
 
 async function createBooking() {
@@ -203,9 +212,10 @@ onMounted(() => {
     </ul>
 
     <div v-if="selectedSlot" class="booking-form">
+      <div v-if="selectedSlot" ref="bookingFormRef" class="booking-form"></div>
       <h2>Slot buchen</h2>
       <p>
-        Ausgewählt: {{ selectedSlot.slot_date }} - {{ selectedSlot.slot_time }}
+        Ausgewählt: {{ formatDateTime(selectedSlot.slot_date, selectedSlot.slot_time) }}
       </p>
 
       <input v-model="studentName" type="text" placeholder="Name" />

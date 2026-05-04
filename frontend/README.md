@@ -74,7 +74,7 @@ bun run preview
 
 Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
 
-````md
+
 # Appointment Booking System – Web Engineering Project
 
 ## Project Description
@@ -118,7 +118,7 @@ Run the following commands inside the `frontend` folder:
 ```bash
 npm install
 npm run dev
-````
+```
 
 The project will then be available at:
 `http://localhost:3000`

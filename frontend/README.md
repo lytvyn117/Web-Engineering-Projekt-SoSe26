@@ -74,6 +74,7 @@ bun run preview
 
 Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
 
+````md
 # Appointment Booking System – Web Engineering Project
 
 ## Project Description
@@ -102,7 +103,6 @@ There are two roles:
   - authentication
 - JavaScript
 - HTML / CSS
-- Chat GPT
 
 ## Project Structure
 - `app/pages/index.vue` – landing page with role selection
@@ -115,9 +115,10 @@ There are two roles:
 ## Local Development
 Run the following commands inside the `frontend` folder:
 
+```bash
 npm install
 npm run dev
-
+````
 
 The project will then be available at:
 `http://localhost:3000`
@@ -139,8 +140,9 @@ For submission, the file `.env.submit` is included.
 
 The project can be statically generated with:
 
+```bash
 npx nuxi generate
-
+```
 
 The generated static build is located in:
 `dist`

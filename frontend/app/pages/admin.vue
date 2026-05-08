@@ -216,11 +216,12 @@ function minutesToTime(minutes) {
   return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:00`
 }
 
-/* The next function for creating recurring slots was created with the help of Chat GPT.
-The struktural logic for generating the slots is based on iterating through the date range 
-and checking for the selected weekdays, then creating slots based on the specified time 
-range and interval. Additionally, it checks for existing slots to avoid duplicates 
-before inserting new ones into the database.
+/* The next function for creating recurring slots was created with the help of Chat GPT 
+in conceptualizing the approach + the implementation in several steps like checking for 
+already existing slots in a certain date range. The struktural logic for generating the
+slots is based on iterating through the date range and checking for the selected weekdays, 
+then creating slots based on the specified time range and interval. Additionally, it checks
+for existing slots to avoid duplicates before inserting new ones into the database.
 */
 async function createRecurringSlots() {
   errorMessage.value = ''

@@ -31,9 +31,12 @@ const bookingFormRef = ref(null)
 async function loadSlots() {
   errorMessage.value = ''
 
+  const today = new Date().toISOString().split('T')[0]
+
   const { data: slotData, error: slotError } = await $supabase
     .from('slots')
     .select('*')
+    .gte('slot_date', today)
     .order('slot_date', { ascending: true })
     .order('slot_time', { ascending: true })
 
@@ -150,14 +153,22 @@ async function loadMyBookings() {
       )
     `)
     .eq('matrikelnummer', searchMatrikelnummer.value)
-    .order('created_at', { ascending: false })
 
   if (error) {
     errorMessage.value = 'Buchungen konnten nicht geladen werden.'
     return
   }
 
+  const today = new Date().toISOString().split('T')[0]
+
   myBookings.value = data
+    .filter(booking => booking.slots?.slot_date >= today)
+    .sort((a, b) => {
+    const dateTimeA = new Date(`${a.slots?.slot_date}T${a.slots?.slot_time}`)
+    const dateTimeB = new Date(`${b.slots?.slot_date}T${b.slots?.slot_time}`)
+
+    return dateTimeA - dateTimeB
+  })
 }
 
 async function cancelBooking(bookingId) {
@@ -187,11 +198,13 @@ onMounted(() => {
 <template>
   <div class="page">
     <h1>Verfügbare Slots</h1>
-
     <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
-    <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
 
-    <div class="slots-grid">
+    <p v-else-if="slots.length === 0" class="empty-message">
+      Zurzeit sind keine verfügbaren Slots vorhanden
+    </p>
+
+    <div v-else class="slots-grid">
       <div v-for="slot in slots" :key="slot.id" class="slot-card">
         <div class="slot-info">
           {{ formatDateTime(slot.slot_date, slot.slot_time) }}
@@ -211,6 +224,9 @@ onMounted(() => {
       </div>
     </div>
 
+    <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+    <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
+
     <div v-if="selectedSlot" class="booking-form">
       <div v-if="selectedSlot" ref="bookingFormRef" class="booking-form"></div>
       <h2>Slot buchen</h2>
@@ -225,11 +241,10 @@ onMounted(() => {
       <button @click="createBooking">Buchung speichern</button>
     </div>
 
-    <div class="my-bookings">
-      <h2>Meine Buchungen</h2>
-
-      <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
-      <p v-if="cancelSuccessMessage" class="success-message">{{ cancelSuccessMessage }}</p>
+    <h2>Meine Buchungen</h2>
+    <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+    <p v-if="cancelSuccessMessage" class="success-message">{{ cancelSuccessMessage }}</p>
+    <div class="my-bookings section-box">
 
       <div class="search-row">
         <input
@@ -242,17 +257,29 @@ onMounted(() => {
 
       <ul v-if="myBookings.length > 0" class="booking-list">
         <li v-for="booking in myBookings" :key="booking.id" class="booking-item">
-          <div>
-            <strong>{{ formatDateTime(booking.slots?.slot_date, booking.slots?.slot_time) }}</strong>
-            <div>{{ booking.student_name }}</div>
-            <div>{{ booking.anliegen }}</div>
+          <div class="booking-content">
+            <div class="booking-datetime">
+              {{ formatDateTime(booking.slots?.slot_date, booking.slots?.slot_time) }}
+            </div>
+
+            <div class="booking-name">
+              {{ booking.student_name }}
+            </div>
+
+            <div class="booking-purpose">
+              {{ booking.anliegen }}
+            </div>
           </div>
 
-          <button @click="cancelBooking(booking.id)">Stornieren</button>
+          <button @click="cancelBooking(booking.id)" class="cancel-button">
+            Stornieren
+          </button>
         </li>
       </ul>
 
-      <p v-else-if="hasSearchedBookings">Keine Buchungen gefunden.</p>
+      <p v-else-if="hasSearchedBookings" class="empty-message">
+        Keine Buchungen gefunden
+      </p>
     </div>
   </div>
 </template>
@@ -278,10 +305,10 @@ h2 {
 
 .slots-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 320px));
+  justify-content: start;
+  gap: 16px;
   margin-top: 20px;
-  margin-bottom: 40px;
 }
 
 .slot-card {
@@ -349,6 +376,15 @@ textarea {
   font-weight: bold;
 }
 
+.empty-message {
+  margin-top: 20px;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid #dbe2ea;
+  border-radius: 12px;
+  color: #475569;
+}
+
 .status-badge {
   display: inline-block;
   padding: 6px 10px;
@@ -381,15 +417,59 @@ textarea {
 .booking-list {
   list-style: none;
   padding: 0;
+  margin: 20px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .booking-item {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  padding: 12px;
-  margin-bottom: 10px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  align-items: center;
+  gap: 20px;
+  padding: 18px 20px;
+  background: white;
+  border: 1px solid #dbe2ea;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.booking-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.booking-datetime {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.booking-name {
+  font-size: 18px;
+  color: #334155;
+}
+
+.booking-purpose {
+  font-size: 17px;
+  color: #475569;
+  word-break: break-word;
+  max-width: 700px;
+}
+
+.cancel-button {
+  flex-shrink: 0;
+}
+
+.section-box {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 24px;
+  margin-top: 28px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 </style>

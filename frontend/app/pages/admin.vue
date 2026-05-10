@@ -45,9 +45,12 @@ const weekdayOptions = [
 async function loadSlots() {
   errorMessage.value = ''
 
+  const today = new Date().toISOString().split('T')[0]
+
   const { data: slotData, error: slotError } = await $supabase
     .from('slots')
     .select('*')
+    .gte('slot_date', today)
     .order('slot_date', { ascending: true })
     .order('slot_time', { ascending: true })
 
@@ -166,7 +169,16 @@ async function loadAllBookings() {
     return
   }
 
+  const today = new Date().toISOString().split('T')[0]
+
   allBookings.value = data
+    .filter(booking => booking.slots?.slot_date >= today)
+    .sort((a, b) => {
+      const dateTimeA = new Date(`${a.slots?.slot_date}T${a.slots?.slot_time}`)
+      const dateTimeB = new Date(`${b.slots?.slot_date}T${b.slots?.slot_time}`)
+
+      return dateTimeA - dateTimeB
+    })
 }
 
 async function checkAdminAccess() {
@@ -405,7 +417,13 @@ onMounted(async () => {
       </div>
 
       <h2>Angelegte Slots</h2>
-      <div class="slots-grid">
+      <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+
+      <p v-else-if="slots.length === 0" class="empty-message">
+        Es sind aktuell keine Slots vorhanden.
+      </p>
+
+      <div v-else class="slots-grid">
         <div v-for="slot in slots" :key="slot.id" class="slot-card">
           <div class="slot-info">
             {{ formatDateTime(slot.slot_date, slot.slot_time) }}
@@ -471,7 +489,7 @@ onMounted(async () => {
           </tbody>
         </table>
 
-        <p v-else>Keine Buchungen vorhanden.</p>
+        <p v-else class="empty-message">Keine Buchungen vorhanden.</p>
       </div>
     </div>
   </div>
@@ -505,10 +523,10 @@ h2 {
 
 .slots-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 320px));
+  justify-content: start;
+  gap: 16px;
   margin-top: 20px;
-  margin-bottom: 40px;
 }
 
 .slot-card {
@@ -616,6 +634,15 @@ h2 {
 .status-booked {
   background: #e0e7ff;
   color: #3730a3;
+}
+
+.empty-message {
+  margin-top: 20px;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid #dbe2ea;
+  border-radius: 12px;
+  color: #475569;
 }
 
 .admin-topbar {

@@ -191,25 +191,25 @@ onMounted(() => {
     <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
     <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
 
-    <ul class="slot-list">
-      <li v-for="slot in slots" :key="slot.id" class="slot-item">
-        <span>
+    <div class="slots-grid">
+      <div v-for="slot in slots" :key="slot.id" class="slot-card">
+        <div class="slot-info">
           {{ formatDateTime(slot.slot_date, slot.slot_time) }}
-        </span>
-        
+        </div>
+
         <template v-if="slot.is_blocked">
-          <strong>Gesperrt</strong>
+          <span class="status-badge status-blocked">Gesperrt</span>
         </template>
 
         <template v-else-if="isBooked(slot.id)">
-          <strong>Bereits gebucht</strong>
+          <span class="status-badge status-booked">Bereits gebucht</span>
         </template>
 
         <template v-else>
           <button @click="selectSlot(slot)">Buchen</button>
         </template>
-      </li>
-    </ul>
+      </div>
+    </div>
 
     <div v-if="selectedSlot" class="booking-form">
       <div v-if="selectedSlot" ref="bookingFormRef" class="booking-form"></div>
@@ -259,24 +259,48 @@ onMounted(() => {
 
 <style scoped>
 .page {
-  padding: 24px;
-  font-family: Arial, sans-serif;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  text-align: center;
 }
 
-.slot-list {
-  list-style: none;
-  padding: 0;
+h1 {
+  font-size: 42px;
+  margin-bottom: 24px;
 }
 
-.slot-item {
+h2 {
+  font-size: 24px;
+  margin-top: 32px;
+  margin-bottom: 16px;
+}
+
+.slots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 18px;
+  margin-top: 20px;
+  margin-bottom: 40px;
+}
+
+.slot-card {
+  background: white;
+  border: 1px solid #dbe2ea;
+  border-radius: 14px;
+  padding: 18px;
+  min-height: 150px;
   display: flex;
+  flex-direction: column;
   justify-content: space-between;
-  align-items: center;
-  max-width: 500px;
-  padding: 12px;
-  margin-bottom: 10px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  gap: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.slot-info {
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.4;
 }
 
 .booking-form {
@@ -287,11 +311,32 @@ onMounted(() => {
   gap: 12px;
 }
 
-input,
-textarea,
 button {
-  padding: 10px;
-  font-size: 16px;
+  padding: 10px 16px;
+  font-size: 15px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #f3f4f6;
+}
+
+input,
+select,
+textarea {
+  padding: 10px 12px;
+  font-size: 15px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: white;
+}
+
+textarea {
+  min-height: 100px;
+  resize: vertical;
 }
 
 .error-message {
@@ -302,6 +347,24 @@ button {
 .success-message {
   color: #1b5e20;
   font-weight: bold;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.status-blocked {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-booked {
+  background: #e0e7ff;
+  color: #3730a3;
 }
 
 .my-bookings {

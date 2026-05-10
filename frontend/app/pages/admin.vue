@@ -372,8 +372,9 @@ onMounted(async () => {
         <button @click="createSlot">Slot anlegen</button>
       </div>
 
+      <h2>Wiederkehrende Verfügbarkeiten</h2>
       <div class="recurring-slot-form">
-        <h2>Wiederkehrende Verfügbarkeiten</h2>
+        
 
         <div class="form-grid">
           <input v-model="recurringStartDate" type="date" />
@@ -403,26 +404,48 @@ onMounted(async () => {
         <button @click="createRecurringSlots">Wiederkehrende Slots anlegen</button>
       </div>
 
-      <ul class="slot-list">
-        <li v-for="slot in slots" :key="slot.id" class="slot-item">
-          <span>
+      <h2>Angelegte Slots</h2>
+      <div class="slots-grid">
+        <div v-for="slot in slots" :key="slot.id" class="slot-card">
+          <div class="slot-info">
             {{ formatDateTime(slot.slot_date, slot.slot_time) }}
-          </span>
-
-          <div class="slot-actions">
-            <strong v-if="slot.is_blocked">Gesperrt</strong>
-            <strong v-else>Aktiv</strong>
-
-            <button @click="toggleBlock(slot)">
-              {{ slot.is_blocked ? 'Entsperren' : 'Sperren' }}
-            </button>
-
-            <button @click="deleteSlot(slot)" :disabled="isBooked(slot.id)">
-              Löschen
-            </button>
           </div>
-        </li>
-      </ul>
+
+          <div class="slot-card-actions">
+            <span
+              v-if="isBooked(slot.id)"
+              class="status-badge status-booked"
+            >
+              Gebucht
+            </span>
+            <span
+              v-else-if="slot.is_blocked"
+              class="status-badge status-blocked"
+            >
+              Gesperrt
+            </span>
+            <span
+              v-else
+              class="status-badge status-active"
+            >
+              Aktiv
+            </span>
+
+            <div class="button-group">
+              <button @click="toggleBlock(slot)">
+                {{ slot.is_blocked ? 'Entsperren' : 'Sperren' }}
+              </button>
+
+              <button
+                @click="deleteSlot(slot)"
+                :disabled="isBooked(slot.id)"
+              >
+                Löschen
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div class="all-bookings">
         <h2>Alle Buchungen</h2>
@@ -456,30 +479,21 @@ onMounted(async () => {
 
 <style scoped>
 .page {
-  padding: 24px;
-  font-family: Arial, sans-serif;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  text-align: center;
 }
 
-.slot-list {
-  list-style: none;
-  padding: 0;
+h1 {
+  font-size: 42px;
+  margin-bottom: 24px;
 }
 
-.slot-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 500px;
-  padding: 12px;
-  margin-bottom: 10px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-}
-
-.slot-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+h2 {
+  font-size: 24px;
+  margin-top: 32px;
+  margin-bottom: 16px;
 }
 
 .create-slot-form {
@@ -489,6 +503,45 @@ onMounted(async () => {
   max-width: 500px;
 }
 
+.slots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 18px;
+  margin-top: 20px;
+  margin-bottom: 40px;
+}
+
+.slot-card {
+  background: white;
+  border: 1px solid #dbe2ea;
+  border-radius: 14px;
+  padding: 18px;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.slot-info {
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.slot-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.button-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .all-bookings {
   margin-top: 40px;
   max-width: 1000px;
@@ -496,21 +549,40 @@ onMounted(async () => {
 
 .bookings-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   margin-top: 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .bookings-table th,
 .bookings-table td {
-  border: 1px solid #ccc;
-  padding: 12px;
+  padding: 14px 16px;
   text-align: left;
   vertical-align: top;
+  border-bottom: 1px solid #c9ceda;
 }
 
 .bookings-table th {
-  background-color: #f5f5f5;
-  font-weight: bold;
+  background-color: #f8fafc;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.bookings-table tbody tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+.bookings-table tbody tr:hover {
+  background-color: #f3f4f6;
+}
+
+.bookings-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .success-message {
@@ -523,6 +595,29 @@ onMounted(async () => {
   font-weight: bold;
 }
 
+.status-badge {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.status-active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-blocked {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-booked {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
 .admin-topbar {
   position: absolute;
   top: 16px;
@@ -533,6 +628,34 @@ onMounted(async () => {
   padding: 6px 10px;
   font-size: 14px;
   cursor: pointer;
+}
+
+button {
+  padding: 10px 16px;
+  font-size: 15px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #f3f4f6;
+}
+
+input,
+select,
+textarea {
+  padding: 10px 12px;
+  font-size: 15px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: white;
+}
+
+textarea {
+  min-height: 100px;
+  resize: vertical;
 }
 
 .recurring-slot-form {

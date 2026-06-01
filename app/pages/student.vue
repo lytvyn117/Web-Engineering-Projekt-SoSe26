@@ -4,7 +4,7 @@
  where I asked for conceptual guidance. -->
 
 <script setup>
-import { formatDate, formatTime, formatDateTime } from '../utils/formatters'
+import { formatDateTime } from '../utils/formatters'
 
 const { $supabase } = useNuxtApp()
 
@@ -197,9 +197,9 @@ onMounted(() => {
 
 <template>
   <div class="page">
-    <h1>Verfügbare Slots</h1>
-    <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+    <PageHeader title="Verfügbare Slots" subtitle="Buchen und verwalten Sie Ihre Termine"/>
 
+    <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
     <p v-else-if="slots.length === 0" class="empty-message">
       Zurzeit sind keine verfügbaren Slots vorhanden
     </p>
@@ -235,8 +235,21 @@ onMounted(() => {
       </p>
 
       <input v-model="studentName" type="text" placeholder="Name" />
-      <input v-model="matrikelnummer" type="text" placeholder="Matrikelnummer" />
-      <textarea v-model="anliegen" placeholder="Anliegen"></textarea>
+      <input
+        v-model="matrikelnummer"
+        type="text"
+        inputmode="numeric"
+        pattern="[0-9]*"
+        placeholder="Matrikelnummer"
+        @input="matrikelnummer = matrikelnummer.replace(/\D/g, '')"
+      />
+      <textarea
+        v-model="anliegen"
+        maxlength="100"
+        placeholder="Anliegen"
+      ></textarea>
+      <p class="char-counter">{{ anliegen.length }}/100 Zeichen</p>
+      
 
       <button @click="createBooking">Buchung speichern</button>
     </div>
@@ -250,7 +263,10 @@ onMounted(() => {
         <input
           v-model="searchMatrikelnummer"
           type="text"
+          inputmode="numeric"
+          pattern="[0-9]*"
           placeholder="Matrikelnummer eingeben"
+          @input="searchMatrikelnummer = searchMatrikelnummer.replace(/\D/g, '')"
         />
         <button @click="loadMyBookings">Buchungen laden</button>
       </div>
@@ -271,7 +287,7 @@ onMounted(() => {
             </div>
           </div>
 
-          <button @click="cancelBooking(booking.id)" class="cancel-button">
+          <button class="cancel-button" @click="cancelBooking(booking.id)">
             Stornieren
           </button>
         </li>
@@ -289,7 +305,6 @@ onMounted(() => {
   max-width: 1100px;
   margin: 0 auto;
   padding: 32px 24px;
-  text-align: center;
 }
 
 h1 {
@@ -305,9 +320,8 @@ h2 {
 
 .slots-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 320px));
-  justify-content: start;
-  gap: 16px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
   margin-top: 20px;
 }
 
@@ -343,12 +357,12 @@ button {
   font-size: 15px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
-  background: white;
+  background: rgb(153, 188, 229);
   cursor: pointer;
 }
 
 button:hover {
-  background: #f3f4f6;
+  background: #bccbea;
 }
 
 input,
@@ -471,5 +485,41 @@ textarea {
   padding: 24px;
   margin-top: 28px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.char-counter {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #64748b;
+  text-align: right;
+}
+
+@media (max-width: 1100px) {
+  .slots-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 800px) {
+  .slots-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .search-row {
+    flex-direction: column;
+  }
+
+  .booking-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .cancel-button {
+    width: 100%;
+  }
+
+  .booking-purpose {
+    max-width: 100%;
+  }
 }
 </style>

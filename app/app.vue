@@ -1,7 +1,7 @@
 <template>
-  <div class="app-shell">
+  <NuxtLayout>
     <NuxtPage />
-  </div>
+  </NuxtLayout>
 </template>
 
 <style>
@@ -22,9 +22,5 @@ input,
 select,
 textarea {
   font: inherit;
-}
-
-.app-shell {
-  min-height: 100vh;
 }
 </style>

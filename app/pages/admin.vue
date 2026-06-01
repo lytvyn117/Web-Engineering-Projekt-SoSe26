@@ -1,5 +1,6 @@
 
 <script setup>
+import { navigateTo } from 'nuxt/app'
 import { formatDate, formatTime, formatDateTime } from '../utils/formatters'
 
 definePageMeta({
@@ -16,10 +17,6 @@ const slotTime = ref('')
 const successMessage = ref('')
 
 const allBookings = ref([])
-
-const router = useRouter()
-const isCheckingAccess = ref(true)
-const isAuthorized = ref(false)
 
 const bookedSlotIds = ref([])
 
@@ -181,35 +178,18 @@ async function loadAllBookings() {
     })
 }
 
-async function checkAdminAccess() {
-  const { data: sessionData } = await $supabase.auth.getUser()
-  const user = sessionData?.user
-
-  if (!user) {
-    router.push('/admin-login')
-    return
-  }
-
-  const { data: adminProfile, error } = await $supabase
-    .from('admin_profiles')
-    .select('is_admin')
-    .eq('id', user.id)
-    .single()
-
-  if (error || !adminProfile?.is_admin) {
-    await $supabase.auth.signOut()
-    router.push('/admin-login')
-    return
-  }
-
-  isAuthorized.value = true
-}
-
 async function logout() {
   await $supabase.auth.signOut()
-  router.push('/admin-login')
+  navigateTo('/admin-login')
 }
 
+/* The next helping functions and the function for creating recurring slots was created with the help of Chat GPT 
+in conceptualizing the approach + the implementation in several steps like checking for 
+already existing slots in a certain date range. The structural logic for generating the
+slots is based on iterating through the date range and checking for the selected weekdays, 
+then creating slots based on the specified time range and interval. Additionally, it checks
+for existing slots to avoid duplicates before inserting new ones into the database.
+*/
 function formatDateForInsert(date) {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -228,13 +208,6 @@ function minutesToTime(minutes) {
   return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:00`
 }
 
-/* The next function for creating recurring slots was created with the help of Chat GPT 
-in conceptualizing the approach + the implementation in several steps like checking for 
-already existing slots in a certain date range. The struktural logic for generating the
-slots is based on iterating through the date range and checking for the selected weekdays, 
-then creating slots based on the specified time range and interval. Additionally, it checks
-for existing slots to avoid duplicates before inserting new ones into the database.
-*/
 async function createRecurringSlots() {
   errorMessage.value = ''
   successMessage.value = ''
@@ -350,124 +323,113 @@ async function createRecurringSlots() {
 }
 
 onMounted(async () => {
-  await checkAdminAccess()
-
-  if (isAuthorized.value) {
-    await loadSlots()
-    await loadAllBookings()
-  }
-
-  isCheckingAccess.value = false
+  await loadSlots()
+  await loadAllBookings()
 })
 </script>
 
 <template>
-  <div v-if="isCheckingAccess" class="page">
-    <p>Zugriff wird geprüft...</p>
-  </div>
+  <div class="page">
+    <PageHeader title="Admin-Bereich" subtitle="Verwalten Sie Slots, wiederkehrende Verfügbarkeiten und Buchungen"/>
+    <div class="admin-topbar">
+      <button class="logout-button" @click="logout">Logout</button>
+    </div>
 
-  <div v-else-if="isAuthorized" class="page">
-    <div class="page">
-      <div class="admin-topbar">
-        <button @click="logout" class="logout-button">Logout</button>
-      </div>
-      <h1>Admin-Bereich</h1>
+    <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+    <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
+    
+    <h2>Einzelslot</h2>
+    <div class="create-slot-form">
+      <input v-model="slotDate" type="date" />
+      <input v-model="slotTime" type="time" />
+      <button @click="createSlot">Slot anlegen</button>
+    </div>
 
-      <h2>Einzelslot anlegen</h2>
-
-      <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
-      <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
+    <h2>Wiederkehrende Verfügbarkeiten</h2>
+    <div class="recurring-slot-form">
       
-      <div class="create-slot-form">
-        <input v-model="slotDate" type="date" />
-        <input v-model="slotTime" type="time" />
-        <button @click="createSlot">Slot anlegen</button>
+
+      <div class="form-grid">
+        <input v-model="recurringStartDate" type="date" />
+        <input v-model="recurringEndDate" type="date" />
+
+        <input v-model="recurringStartTime" type="time" />
+        <input v-model="recurringEndTime" type="time" />
+
+        <select v-model="recurringInterval">
+          <option value="30">30 Minuten</option>
+          <option value="60">60 Minuten</option>
+          <option value="90">90 Minuten</option>
+        </select>
       </div>
 
-      <h2>Wiederkehrende Verfügbarkeiten</h2>
-      <div class="recurring-slot-form">
-        
-
-        <div class="form-grid">
-          <input v-model="recurringStartDate" type="date" />
-          <input v-model="recurringEndDate" type="date" />
-
-          <input v-model="recurringStartTime" type="time" />
-          <input v-model="recurringEndTime" type="time" />
-
-          <select v-model="recurringInterval">
-            <option value="30">30 Minuten</option>
-            <option value="60">60 Minuten</option>
-            <option value="90">90 Minuten</option>
-          </select>
-        </div>
-
-        <div class="weekday-checkboxes">
-          <label v-for="day in weekdayOptions" :key="day.value" class="weekday-option">
-            <input
-              v-model="selectedWeekdays"
-              type="checkbox"
-              :value="day.value"
-            />
-            {{ day.label }}
-          </label>
-        </div>
-
-        <button @click="createRecurringSlots">Wiederkehrende Slots anlegen</button>
+      <div class="weekday-checkboxes">
+        <label v-for="day in weekdayOptions" :key="day.value" class="weekday-option">
+          <input
+            v-model="selectedWeekdays"
+            type="checkbox"
+            :value="day.value"
+          />
+          {{ day.label }}
+        </label>
       </div>
 
-      <h2>Angelegte Slots</h2>
-      <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+      <button @click="createRecurringSlots">Wiederkehrende Slots anlegen</button>
+    </div>
 
-      <p v-else-if="slots.length === 0" class="empty-message">
-        Es sind aktuell keine Slots vorhanden.
-      </p>
+    <h2>Angelegte Slots</h2>
+    <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
 
-      <div v-else class="slots-grid">
-        <div v-for="slot in slots" :key="slot.id" class="slot-card">
-          <div class="slot-info">
-            {{ formatDateTime(slot.slot_date, slot.slot_time) }}
-          </div>
+    <p v-else-if="slots.length === 0" class="empty-message">
+      Es sind aktuell keine Slots vorhanden.
+    </p>
 
-          <div class="slot-card-actions">
-            <span
-              v-if="isBooked(slot.id)"
-              class="status-badge status-booked"
+    <div v-else class="slots-grid">
+      <div v-for="slot in slots" :key="slot.id" class="slot-card">
+        <div class="slot-info">
+          {{ formatDateTime(slot.slot_date, slot.slot_time) }}
+        </div>
+
+        <div class="slot-card-actions">
+          <span
+            v-if="isBooked(slot.id)"
+            class="status-badge status-booked"
+          >
+            Gebucht
+          </span>
+          <span
+            v-else-if="slot.is_blocked"
+            class="status-badge status-blocked"
+          >
+            Gesperrt
+          </span>
+          <span
+            v-else
+            class="status-badge status-active"
+          >
+            Aktiv
+          </span>
+
+          <div class="button-group">
+            <button @click="toggleBlock(slot)">
+              {{ slot.is_blocked ? 'Entsperren' : 'Sperren' }}
+            </button>
+
+            <button
+              :disabled="isBooked(slot.id)"
+              @click="deleteSlot(slot)"
             >
-              Gebucht
-            </span>
-            <span
-              v-else-if="slot.is_blocked"
-              class="status-badge status-blocked"
-            >
-              Gesperrt
-            </span>
-            <span
-              v-else
-              class="status-badge status-active"
-            >
-              Aktiv
-            </span>
-
-            <div class="button-group">
-              <button @click="toggleBlock(slot)">
-                {{ slot.is_blocked ? 'Entsperren' : 'Sperren' }}
-              </button>
-
-              <button
-                @click="deleteSlot(slot)"
-                :disabled="isBooked(slot.id)"
-              >
-                Löschen
-              </button>
-            </div>
+              Löschen
+            </button>
           </div>
         </div>
       </div>
+    </div>
 
-      <div class="all-bookings">
-        <h2>Alle Buchungen</h2>
-
+    <div class="all-bookings">
+      <h2>Alle Buchungen</h2>
+      
+      <div class="table-wrapper">
         <table v-if="allBookings.length > 0" class="bookings-table">
           <thead>
             <tr>
@@ -488,7 +450,6 @@ onMounted(async () => {
             </tr>
           </tbody>
         </table>
-
         <p v-else class="empty-message">Keine Buchungen vorhanden.</p>
       </div>
     </div>
@@ -500,7 +461,6 @@ onMounted(async () => {
   max-width: 1100px;
   margin: 0 auto;
   padding: 32px 24px;
-  text-align: center;
 }
 
 h1 {
@@ -523,9 +483,8 @@ h2 {
 
 .slots-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 320px));
-  justify-content: start;
-  gap: 16px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
   margin-top: 20px;
 }
 
@@ -619,6 +578,7 @@ h2 {
   border-radius: 999px;
   font-size: 14px;
   font-weight: 600;
+  text-align: center;
 }
 
 .status-active {
@@ -662,12 +622,12 @@ button {
   font-size: 15px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
-  background: white;
+  background: rgb(153, 188, 229);
   cursor: pointer;
 }
 
 button:hover {
-  background: #f3f4f6;
+  background: #bccbea;
 }
 
 input,
@@ -708,5 +668,48 @@ textarea {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  margin-top: 16px;
+}
+
+@media (max-width: 1100px) {
+  .slots-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 800px) {
+  .slots-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .create-slot-form {
+    flex-direction: column;
+    max-width: 100%;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .button-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .button-group button {
+    width: 100%;
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+  }
+
+  .bookings-table {
+    min-width: 700px;
+  }
 }
 </style>

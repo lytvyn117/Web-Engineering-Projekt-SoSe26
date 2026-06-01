@@ -1,6 +1,5 @@
 <script setup>
 const { $supabase } = useNuxtApp()
-const router = useRouter()
 
 const email = ref('')
 const password = ref('')
@@ -9,18 +8,13 @@ const errorMessage = ref('')
 async function login() {
   errorMessage.value = ''
 
-  if (!email.value || !password.value) {
-    errorMessage.value = 'Bitte E-Mail und Passwort eingeben.'
-    return
-  }
-
   const { data, error } = await $supabase.auth.signInWithPassword({
     email: email.value,
     password: password.value
   })
 
   if (error) {
-    errorMessage.value = 'Login fehlgeschlagen.'
+    errorMessage.value = error.message
     return
   }
 
@@ -32,19 +26,23 @@ async function login() {
     .eq('id', userId)
     .single()
 
-  if (profileError || !adminProfile?.is_admin) {
-    errorMessage.value = 'Kein Admin-Zugriff.'
-    await $supabase.auth.signOut()
+  if (profileError) {
+    errorMessage.value = 'PROFILE ERROR: ' + profileError.message
     return
   }
 
-  router.push('/admin')
+  if (!adminProfile?.is_admin) {
+    errorMessage.value = 'Kein Admin-Zugriff.'
+    return
+  }
+
+  await navigateTo('/admin')
 }
 </script>
 
 <template>
   <div class="page">
-    <h1>Admin-Login</h1>
+    <PageHeader title="Admin-Login" subtitle="Melden Sie sich an, um Slots und Buchungen zu verwalten"/>
 
     <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
 
@@ -61,7 +59,6 @@ async function login() {
   max-width: 1100px;
   margin: 0 auto;
   padding: 32px 24px;
-  text-align: center;
 }
 
 h1 {
@@ -87,12 +84,12 @@ button {
   font-size: 15px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
-  background: white;
+  background: rgb(153, 188, 229);
   cursor: pointer;
 }
 
 button:hover {
-  background: #f3f4f6;
+  background: #bccbea;
 }
 
 input,

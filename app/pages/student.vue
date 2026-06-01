@@ -11,7 +11,10 @@ const { $supabase } = useNuxtApp()
 const slots = ref([])
 const bookedSlotIds = ref([])
 
-const errorMessage = ref('')
+const slotsErrorMessage = ref('')
+const bookingFormErrorMessage = ref('')
+const searchErrorMessage = ref('')
+//const errorMessage = ref('')
 const successMessage = ref('')
 const cancelSuccessMessage = ref('')
 
@@ -20,7 +23,7 @@ const selectedSlot = ref(null)
 const studentName = ref('')
 const matrikelnummer = ref('')
 const anliegen = ref('')
-
+const email = ref('')
 const searchMatrikelnummer = ref('')
 const myBookings = ref([])
 
@@ -29,7 +32,7 @@ const hasSearchedBookings = ref(false)
 const bookingFormRef = ref(null)
 
 async function loadSlots() {
-  errorMessage.value = ''
+  slotsErrorMessage.value = ''
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -41,7 +44,7 @@ async function loadSlots() {
     .order('slot_time', { ascending: true })
 
   if (slotError) {
-    errorMessage.value = 'Slots konnten nicht geladen werden.'
+    slotsErrorMessage.value = 'Slots konnten nicht geladen werden.'
     return
   }
 
@@ -50,7 +53,7 @@ async function loadSlots() {
     .select('slot_id')
 
   if (bookingError) {
-    errorMessage.value = 'Buchungen konnten nicht geladen werden.'
+    bookingFormErrorMessage.value = 'Buchungen konnten nicht geladen werden.'
     return
   }
 
@@ -68,7 +71,7 @@ async function selectSlot(slot) {
 
   selectedSlot.value = slot
   successMessage.value = ''
-  errorMessage.value = ''
+  bookingFormErrorMessage.value = ''
 
   await nextTick()
 
@@ -82,20 +85,20 @@ async function createBooking() {
     await loadSlots()
 
     if (isBooked(selectedSlot.value.id)) {
-        errorMessage.value = 'Dieser Slot wurde gerade schon gebucht. Bitte wähle einen anderen Termin.'
+        bookingFormErrorMessage.value = 'Dieser Slot wurde gerade schon gebucht. Bitte wähle einen anderen Termin.'
         selectedSlot.value = null
         return
     }
-    errorMessage.value = ''
+    bookingFormErrorMessage.value = ''
     successMessage.value = ''
 
     if (!selectedSlot.value) {
-        errorMessage.value = 'Bitte zuerst einen Slot auswählen.'
+        bookingFormErrorMessage.value = 'Bitte zuerst einen Slot auswählen.'
         return
     }
 
-    if (!studentName.value || !matrikelnummer.value || !anliegen.value) {
-        errorMessage.value = 'Bitte alle Felder ausfüllen.'
+    if (!studentName.value || !matrikelnummer.value || !anliegen.value || !email.value) {
+        bookingFormErrorMessage.value = 'Bitte alle Felder ausfüllen.'
         return
     }
 
@@ -104,18 +107,19 @@ async function createBooking() {
         slot_id: selectedSlot.value.id,
         student_name: studentName.value,
         matrikelnummer: matrikelnummer.value,
+        email: email.value,
         anliegen: anliegen.value
         }
     ])
 
     if (error) {
         if (error.code === '23505') {
-        errorMessage.value =
+        bookingFormErrorMessage.value =
             'Dieser Slot wurde gerade schon gebucht. Bitte wähle einen anderen Termin.'
         selectedSlot.value = null
         await loadSlots()
         } else {
-        errorMessage.value = 'Die Buchung konnte nicht gespeichert werden.'
+        bookingFormErrorMessage.value = 'Die Buchung konnte nicht gespeichert werden.'
         }
         return
     }
@@ -123,6 +127,7 @@ async function createBooking() {
     successMessage.value = 'Buchung erfolgreich gespeichert.'
     studentName.value = ''
     matrikelnummer.value = ''
+    email.value = ''
     anliegen.value = ''
     selectedSlot.value = null
 
@@ -130,12 +135,12 @@ async function createBooking() {
 }
 
 async function loadMyBookings() {
-  errorMessage.value = ''
+  searchErrorMessage.value = ''
   successMessage.value = ''
   hasSearchedBookings.value = true
 
   if (!searchMatrikelnummer.value) {
-    errorMessage.value = 'Bitte eine Matrikelnummer eingeben.'
+    searchErrorMessage.value = 'Bitte eine Matrikelnummer eingeben.'
     return
   }
 
@@ -155,7 +160,7 @@ async function loadMyBookings() {
     .eq('matrikelnummer', searchMatrikelnummer.value)
 
   if (error) {
-    errorMessage.value = 'Buchungen konnten nicht geladen werden.'
+    searchErrorMessage.value = 'Buchungen konnten nicht geladen werden.'
     return
   }
 
@@ -172,7 +177,7 @@ async function loadMyBookings() {
 }
 
 async function cancelBooking(bookingId) {
-  errorMessage.value = ''
+  searchErrorMessage.value = ''
   cancelSuccessMessage.value = ''
 
   const { error } = await $supabase
@@ -181,7 +186,7 @@ async function cancelBooking(bookingId) {
     .eq('id', bookingId)
 
   if (error) {
-    errorMessage.value = 'Buchung konnte nicht storniert werden.'
+    searchErrorMessage.value = 'Buchung konnte nicht storniert werden.'
     return
   }
 
@@ -199,7 +204,7 @@ onMounted(() => {
   <div class="page">
     <PageHeader title="Verfügbare Slots" subtitle="Buchen und verwalten Sie Ihre Termine"/>
 
-    <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+    <p v-if="bookingFormErrorMessage" class="error-message">{{ bookingFormErrorMessage }}</p>
     <p v-else-if="slots.length === 0" class="empty-message">
       Zurzeit sind keine verfügbaren Slots vorhanden
     </p>
@@ -224,7 +229,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+    <p v-if="bookingFormErrorMessage" class="error-message">{{ bookingFormErrorMessage }}</p>
     <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
 
     <div v-if="selectedSlot" class="booking-form">
@@ -243,6 +248,11 @@ onMounted(() => {
         placeholder="Matrikelnummer"
         @input="matrikelnummer = matrikelnummer.replace(/\D/g, '')"
       />
+      <input
+        v-model="email"
+        type="email"
+        placeholder="E-Mail-Adresse"
+      />
       <textarea
         v-model="anliegen"
         maxlength="100"
@@ -255,7 +265,7 @@ onMounted(() => {
     </div>
 
     <h2>Meine Buchungen</h2>
-    <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+    <p v-if="searchErrorMessage" class="error-message">{{ searchErrorMessage }}</p>
     <p v-if="cancelSuccessMessage" class="success-message">{{ cancelSuccessMessage }}</p>
     <div class="my-bookings section-box">
 
@@ -405,6 +415,7 @@ textarea {
   border-radius: 999px;
   font-size: 14px;
   font-weight: 600;
+  text-align: center;
 }
 
 .status-blocked {

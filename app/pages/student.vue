@@ -130,7 +130,7 @@ async function createBooking() {
     const bookingSlotDate = selectedSlot.value.slot_date
     const bookingSlotTime = selectedSlot.value.slot_time
 
-    const { data: mailData, error: mailError } = await $supabase.functions.invoke('dynamic-worker', {
+    const { error: mailError } = await $supabase.functions.invoke('dynamic-worker', {
       body: {
         email: bookingEmail,
         studentName: bookingStudentName,

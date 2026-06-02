@@ -124,7 +124,28 @@ async function createBooking() {
         return
     }
 
-    successMessage.value = 'Buchung erfolgreich gespeichert.'
+    // E-Mail-Benachrichtigung senden
+    const bookingEmail = email.value
+    const bookingStudentName = studentName.value
+    const bookingSlotDate = selectedSlot.value.slot_date
+    const bookingSlotTime = selectedSlot.value.slot_time
+
+    const { data: mailData, error: mailError } = await $supabase.functions.invoke('dynamic-worker', {
+      body: {
+        email: bookingEmail,
+        studentName: bookingStudentName,
+        slotDate: bookingSlotDate,
+        slotTime: bookingSlotTime
+      }
+    })
+
+    if (mailError) {
+      successMessage.value = 'Buchung erfolgreich gespeichert, aber die Bestätigungsmail konnte nicht versendet werden.'
+    } else {
+      successMessage.value = 'Buchung erfolgreich gespeichert. Eine Bestätigungsmail wurde versendet.'
+    }
+    
+    // Formular zurücksetzen
     studentName.value = ''
     matrikelnummer.value = ''
     email.value = ''
@@ -204,8 +225,8 @@ onMounted(() => {
   <div class="page">
     <PageHeader title="Verfügbare Slots" subtitle="Buchen und verwalten Sie Ihre Termine"/>
 
-    <p v-if="bookingFormErrorMessage" class="error-message">{{ bookingFormErrorMessage }}</p>
-    <p v-else-if="slots.length === 0" class="empty-message">
+    <p v-if="slotsErrorMessage" class="error-message">{{ slotsErrorMessage }}</p>
+    <p v-if="slots.length === 0" class="empty-message">
       Zurzeit sind keine verfügbaren Slots vorhanden
     </p>
 
